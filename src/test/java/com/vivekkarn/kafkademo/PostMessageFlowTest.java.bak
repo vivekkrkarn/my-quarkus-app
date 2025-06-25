@@ -1,0 +1,47 @@
+package com.vivekkarn.kafkademo;
+
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.Test;
+
+import static io.restassured.RestAssured.given;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.concurrent.TimeUnit;
+
+@QuarkusTest
+public class PostMessageFlowTest {
+
+    private static final String TEST_CONTENT = "Message from test";
+
+    @Inject
+    KafkaTestReceiver testReceiver;
+
+    @Test
+    public void test_postMessage_flow_with_inMemoryKafka() throws InterruptedException {
+        // Send POST request
+        given()
+                .contentType("application/json")
+                .body("{\"content\":\"" + TEST_CONTENT + "\"}")
+                .when()
+                .post("/post-message")
+                .then()
+                .statusCode(200);
+
+        // ✅ Verify DB persistence
+        Message entity = Message.find("content", TEST_CONTENT).firstResult();
+        assertNotNull(entity, "Message should be stored in DB");
+
+        // ✅ Verify Kafka delivery
+        //String received = testReceiver.getReceivedMessages().poll(2, SECONDS);
+        //assertEquals(TEST_CONTENT, received, "Kafka message should be consumed");
+        await()
+                .atMost(30, SECONDS)
+                .untilAsserted(() -> {
+                    String received = testReceiver.getReceivedMessages().peek();
+                    assertEquals(TEST_CONTENT, received, "Kafka message should be consumed");
+                });
+    }
+}

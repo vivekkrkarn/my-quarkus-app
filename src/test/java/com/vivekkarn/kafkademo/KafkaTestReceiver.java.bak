@@ -1,0 +1,22 @@
+package com.vivekkarn.kafkademo;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.reactive.messaging.Incoming;
+
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+@ApplicationScoped
+public class KafkaTestReceiver {
+
+    private final BlockingQueue<String> receivedMessages = new LinkedBlockingQueue<>();
+
+    public BlockingQueue<String> getReceivedMessages() {
+        return receivedMessages;
+    }
+
+    @Incoming("received-messages")
+    public void receive(String msg) {
+        receivedMessages.add(msg);
+    }
+}
